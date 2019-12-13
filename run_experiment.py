@@ -11,10 +11,10 @@ if __name__ == '__main__':
     file_name = f'results.csv'
 
     mu_ranges = [ (i/(-2), i/2) for i in range(1,6) ]
-    sigma_ranges = [ i/10 for i in range(1,30) ]
-    alphas = [ i/100 for i in range(1,100) ]
-    betas = [ i/100 for i in range(1,300) ]
-    gammas = [ i/300 for i in range(1,300) ]
+    sigma_ranges = [ i/10 for i in range(1,5) ]
+    alphas = [ i/100 for i in range(1,10) ]
+    betas = [ i/100 for i in range(1,3) ]
+    gammas = [ i/300 for i in range(1,3) ]
 
     results = []
 
