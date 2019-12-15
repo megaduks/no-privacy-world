@@ -5,16 +5,16 @@ from NoPrivacyModel import TransactionModel
 
 if __name__ == '__main__':
 
-    n_iterations = 5
+    n_iterations = 1000
     n_plebeians = 100
     n_patricians = 100
     file_name = f'results.csv'
 
-    mu_ranges = [ (i/(-2), i/2) for i in range(1,6) ]
-    sigma_ranges = [ i/10 for i in range(1,5) ]
-    alphas = [ i/100 for i in range(1,10) ]
-    betas = [ i/100 for i in range(1,3) ]
-    gammas = [ i/300 for i in range(1,3) ]
+    mu_ranges = [ (i/(-2), i/2) for i in range(1,7) ]
+    sigma_ranges = [ i/10 for i in range(1,6) ]
+    alphas = [ 0.5, 0.75, 0.95 ]
+    betas = [ 0.5, 1, 1.5 ]
+    gammas = [ 0.25, 0.5, 1 ]
 
     results = []
 
@@ -38,7 +38,7 @@ if __name__ == '__main__':
 
                             model = TransactionModel(**kwargs)
 
-                            for i in range(n_iterations):
+                            for i in tqdm(range(n_iterations)):
                                 model.step()
 
                             plebeian_wealth = sum([a.wealth for a in model.schedule.agents if a.type == 'plebeian'])
@@ -49,10 +49,25 @@ if __name__ == '__main__':
                             patrician_transactions = sum([a.num_transactions
                                                           for a in model.schedule.agents if a.type == 'patrician'])
 
-                            avg_plebeian_wealth = plebeian_wealth/n_plebeians
-                            avg_patrician_wealth = patrician_wealth/n_patricians
-                            plebeian_wealth_by_trans = plebeian_wealth/plebeian_transactions
-                            patrician_wealth_by_trans = patrician_wealth/patrician_transactions
+                            if n_plebeians > 0:
+                                avg_plebeian_wealth = plebeian_wealth/n_plebeians
+                            else:
+                                avg_plebeian_wealth = 0
+
+                            if n_patricians > 0:
+                                avg_patrician_wealth = patrician_wealth/n_patricians
+                            else:
+                                avg_patrician_wealth = 0
+
+                            if plebeian_transactions > 0:
+                                plebeian_wealth_by_trans = plebeian_wealth/plebeian_transactions
+                            else:
+                                plebeian_wealth_by_trans = 0
+
+                            if patrician_transactions > 0:
+                                patrician_wealth_by_trans = patrician_wealth/patrician_transactions
+                            else:
+                                patrician_wealth_by_trans = 0
 
                             diff_avg_wealth = avg_plebeian_wealth - avg_patrician_wealth
                             diff_num_trans = plebeian_transactions - patrician_transactions
