@@ -6,22 +6,52 @@ import numpy as np
 from scipy.stats import norm
 
 class Transaction():
-    """A transaction with uncertainty and payoffs"""
-    def __init__(self, mu, sigma):
+    """A transaction with uncertainty and payoffs
+
+    Args:
+        mu: expected value of the transaction
+        sigma: standard deviation of the transaction
+    """
+    def __init__(self, mu: float, sigma: float):
         self.mu = mu
         self.sigma = sigma
 
-    def get_payout(self):
-        """Generates payout from the transaction based on transaction's parameters"""
+    def get_payout(self) -> float:
+        """Generates payout from the transaction based on transaction's parameters
+
+        Returns:
+            random value drawn from the normal distribution parametrized by the attributes of the transaction
+        """
         return self.sigma * np.random.randn() + self.mu
 
-class Patrician(Agent):
-    """An agent with fixed initial wealth."""
+
+class Citizen(Agent):
+    """A generic agent with fixed initial wealth and number of transactions
+
+        Args:
+            unique_id: unique identifier assigned to each agent
+            model: reference to the model holding the state of the simulation
+
+        Attributes:
+            wealth (float): cummulative wealth obtained by the agent
+            num_transactions (int): number of transactions conducted by the agent
+    """
+    def __init__(self, unique_id, model):
+        super().__init__(unique_id, model)
+        self.wealth = 0
+        self.num_transactions = 0
+
+
+class Patrician(Citizen):
+    """An agent representing the Patrician group
+
+        Args:
+            unique_id: unique identifier assigned to each agent
+            model: reference to the model holding the state of the simulation
+    """
     def __init__(self, unique_id, model):
         super().__init__(unique_id, model)
         self.type = 'patrician'
-        self.wealth = 0
-        self.num_transactions = 0
 
     def accepts(self, t: Transaction) -> bool:
         """Decides whether transaction is promising enough to participate in it
@@ -60,27 +90,31 @@ class Patrician(Agent):
                 other_agent.wealth += t.sigma * np.random.randn() + t.mu
 
 
-class Plebeian(Agent):
-    """An agent with fixed initial wealth."""
-    def __init__(self, unique_id, model):
+class Plebeian(Citizen):
+    """An agent which represents the Plebeian group
+
+        Args:
+            unique_id: unique identifier assigned to each agent
+            model: reference to the model holding the state of the simulation
+    """
+    def __init__(self, unique_id: int, model: Model):
         super().__init__(unique_id, model)
         self.type = 'plebeian'
-        self.wealth = 0
-        self.num_transactions = 0
 
     def accepts(self, t: Transaction) -> bool:
         """Decides whether transaction is promising enough to participate in it. In contrast to Patricians,
         who have full knowledge of transaction parameters, Plebeians have skewed and biased knowledge
         about expected payouts
 
-                Params:
-                    t: proposed transaction
-                Returns:
-                    True if the probability of positive the payout is greater than acceptance threshold, False otherwise
+        Args:
+            t: proposed transaction
+        Returns:
+            True if the probability of positive the payout is greater than acceptance threshold, False otherwise
         """
 
         # true percentile of distribution
         true_threshold = norm(t.mu, t.sigma).ppf(1-self.model.alpha)
+
         # what a plebeian sees
         visible_threshold = np.random.uniform(true_threshold-self.model.beta, true_threshold+self.model.gamma)
 
@@ -92,7 +126,18 @@ class Plebeian(Agent):
 
 
 class TransactionModel(Model):
-    """A model with some number of agents."""
+    """A model with some number of agents.
+
+    Args:
+        n_plebeians: number of agents representing the Plebeian class
+        n_patricians: number of agents representing the Patrician class
+        mu_range: range of expected value of the transaction
+        sigma: standard deviation of the transaction
+        alpha: threshold for the acceptance of a transaction
+        beta: lower limit of the range of expected value of transaction observed by the Plebeians
+        gamma: upper limit of the range of expected value of transaction observed by the Plebeians
+        symmetric: if True, transactions are allowed only between Patricians and Plebeians
+    """
     def __init__(self,
                  n_plebeians: int,
                  n_patricians: int,
