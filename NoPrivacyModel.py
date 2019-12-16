@@ -33,7 +33,6 @@ class Patrician(Agent):
         """
         expectation = norm(t.mu, t.sigma)
         if expectation.ppf(1-self.model.alpha) > 0:
-            self.num_transactions += 1
             return True
         else:
             return False
@@ -56,6 +55,7 @@ class Patrician(Agent):
 
         if self.accepts(t):
             if other_agent.accepts(t):
+                self.num_transactions += 1
                 self.wealth += t.sigma * np.random.randn() + t.mu
                 other_agent.wealth += t.sigma * np.random.randn() + t.mu
 
