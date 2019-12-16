@@ -5,14 +5,14 @@ from NoPrivacyModel import TransactionModel
 
 if __name__ == '__main__':
 
-    n_iterations = 1000
+    n_iterations = 30
     n_plebeians = 100
     n_patricians = 100
     file_name = f'results.csv'
 
     mu_ranges = [ (i/(-2), i/2) for i in range(1,7) ]
     sigma_ranges = [ i/10 for i in range(1,6) ]
-    alphas = [ 0.5, 0.75, 0.95 ]
+    alphas = [ 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95 ]
     betas = [ 0.5, 1, 1.5 ]
     gammas = [ 0.25, 0.5, 1 ]
 
@@ -23,7 +23,7 @@ if __name__ == '__main__':
             for alpha in alphas:
                 for beta in betas:
                     for gamma in gammas:
-                        for symmetric in [True, False]:
+                        for symmetric in [True]:
 
                             kwargs = {
                                 'n_plebeians': n_plebeians,
