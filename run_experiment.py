@@ -10,16 +10,16 @@ if __name__ == '__main__':
     n_patricians = 100
     file_name = f'results.csv'
 
-    mu_ranges = [ (i/(-2), i/2) for i in range(1,7) ]
-    sigma_ranges = [ i/10 for i in range(1,6) ]
-    alphas = [ 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95 ]
-    betas = [ 0.5, 1, 1.5, 2.0, 2.5, 3.0 ]
+    mu_ranges = [ (-1,1) ]
+    sigma_ranges = [ (1) ]
+    alphas = [ 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8 ]
+    betas = [ 1.1, 1.5, 2, 3 ]
 
     results = []
 
-    for mu in tqdm(mu_ranges):
+    for mu in mu_ranges:
         for sigma in sigma_ranges:
-            for alpha in alphas:
+            for alpha in tqdm(alphas):
                 for beta in betas:
                     for symmetric in [True]:
 
@@ -44,6 +44,11 @@ if __name__ == '__main__':
                         plebeian_transactions = sum([a.num_transactions
                                                      for a in model.schedule.agents if a.type == 'plebeian'])
                         patrician_transactions = sum([a.num_transactions
+                                                      for a in model.schedule.agents if a.type == 'patrician'])
+
+                        plebeian_rejections = sum([a.num_rejections
+                                                     for a in model.schedule.agents if a.type == 'plebeian'])
+                        patrician_rejections = sum([a.num_rejections
                                                       for a in model.schedule.agents if a.type == 'patrician'])
 
                         if n_plebeians > 0:
@@ -83,6 +88,8 @@ if __name__ == '__main__':
                                 'avg_patrician_wealth': avg_patrician_wealth,
                                 'plebeian_transactions': plebeian_transactions,
                                 'patrician_transactions': patrician_transactions,
+                                'plebeian_rejections': plebeian_rejections,
+                                'patrician_rejections': patrician_rejections,
                                 'plebeian_wealth_by_trans': plebeian_wealth_by_trans,
                                 'patrician_wealth_by_trans': patrician_wealth_by_trans,
                                 'diff_avg_wealth': diff_avg_wealth,

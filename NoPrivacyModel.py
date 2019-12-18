@@ -16,13 +16,19 @@ class Transaction():
         self.mu = mu
         self.sigma = sigma
 
-    def get_payout(self) -> float:
-        """Generates payout from the transaction based on transaction's parameters
+    def get_offer(self) -> norm:
+        """Creates an offer"""
+        return norm(self.mu, self.sigma)
 
+    def get_payoff(self, offer: norm) -> float:
+        """Generates payout from the offer
+
+        Params:
+            offer: a distribution from which the payoff will be drawn
         Returns:
-            random value drawn from the normal distribution parametrized by the attributes of the transaction
+            random value drawn from the normal distribution described by the offer
         """
-        return self.sigma * np.random.randn() + self.mu
+        return offer.rvs()
 
 
 class Citizen(Agent):
@@ -35,11 +41,26 @@ class Citizen(Agent):
         Attributes:
             wealth (float): cummulative wealth obtained by the agent
             num_transactions (int): number of transactions conducted by the agent
+            num_rejections (int): number of transactions rejected by the agent
     """
     def __init__(self, unique_id, model):
         super().__init__(unique_id, model)
         self.wealth = 0
         self.num_transactions = 0
+        self.num_rejections = 0
+
+    def accepts(self, offer: norm) -> bool:
+        """Decides whether transaction is promising enough to participate in it
+
+        Params:
+            offer: distribution, from which payoff will be drawn
+        Returns:
+            True if the probability of positive the payout is greater than acceptance threshold, False otherwise
+        """
+        if offer.ppf(1-self.model.alpha) > 0:
+            return True
+        else:
+            return False
 
 
 class Patrician(Citizen):
@@ -52,20 +73,6 @@ class Patrician(Citizen):
     def __init__(self, unique_id, model):
         super().__init__(unique_id, model)
         self.type = 'patrician'
-
-    def accepts(self, t: Transaction) -> bool:
-        """Decides whether transaction is promising enough to participate in it
-
-        Params:
-            t: proposed transaction
-        Returns:
-            True if the probability of positive the payout is greater than acceptance threshold, False otherwise
-        """
-        expectation = norm(t.mu, t.sigma)
-        if expectation.ppf(1-self.model.alpha) > 0:
-            return True
-        else:
-            return False
 
     def step(self):
         """Performs a single step of the simulation"""
@@ -83,11 +90,22 @@ class Patrician(Citizen):
         sigma = self.model.sigma
         t = Transaction(mu, sigma)
 
-        if self.accepts(t):
-            if other_agent.accepts(t):
+        pat_true = t.get_offer()
+        pleb_true = t.get_offer()
+
+        pleb_mu = np.random.uniform(pleb_true.mean(), pleb_true.mean() * self.model.beta)
+        pleb_offer = norm(pleb_mu, sigma)
+
+        if self.accepts(pat_true):
+            if other_agent.accepts(pleb_offer):
                 self.num_transactions += 1
-                self.wealth += t.sigma * np.random.randn() + t.mu
-                other_agent.wealth += t.sigma * np.random.randn() + t.mu
+                other_agent.num_transactions += 1
+
+                self.wealth += t.get_payoff(pat_true)
+                other_agent.wealth += t.get_payoff(pleb_true)
+            else:
+                self.num_rejections += 1
+                other_agent.num_rejections += 1
 
 
 class Plebeian(Citizen):
@@ -101,29 +119,6 @@ class Plebeian(Citizen):
         super().__init__(unique_id, model)
         self.type = 'plebeian'
 
-    def accepts(self, t: Transaction) -> bool:
-        """Decides whether transaction is promising enough to participate in it. In contrast to Patricians,
-        who have full knowledge of transaction parameters, Plebeians have skewed and biased knowledge
-        about expected payouts
-
-        Args:
-            t: proposed transaction
-        Returns:
-            True if the probability of positive the payout is greater than acceptance threshold, False otherwise
-        """
-
-        # true percentile of distribution
-        true_threshold = norm(t.mu, t.sigma).ppf(1-self.model.alpha)
-
-        # what a plebeian sees
-        visible_threshold = np.random.uniform(true_threshold-self.model.beta, true_threshold+self.model.gamma)
-
-        if visible_threshold > 0:
-            self.num_transactions += 1
-            return True
-        else:
-            return False
-
 
 class TransactionModel(Model):
     """A model with some number of agents.
@@ -134,8 +129,7 @@ class TransactionModel(Model):
         mu_range: range of expected value of the transaction
         sigma: standard deviation of the transaction
         alpha: threshold for the acceptance of a transaction
-        beta: lower limit of the range of expected value of transaction observed by the Plebeians
-        gamma: upper limit of the range of expected value of transaction observed by the Plebeians
+        beta: distortion of the expected value of transaction observed by the Plebeians
         symmetric: if True, transactions are allowed only between Patricians and Plebeians
     """
     def __init__(self,
@@ -145,7 +139,6 @@ class TransactionModel(Model):
                  sigma: float,
                  alpha: float = 0.5,
                  beta: float = 0,
-                 gamma: float = 1,
                  symmetric: bool = False):
 
         self.n_plebeians = n_plebeians
@@ -154,7 +147,6 @@ class TransactionModel(Model):
         self.sigma = sigma
         self.alpha = alpha
         self.beta = beta
-        self.gamma = gamma
         self.symmetric = symmetric
 
         self.schedule = RandomActivation(self)
