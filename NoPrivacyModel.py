@@ -5,30 +5,15 @@ from typing import Tuple
 import numpy as np
 from scipy.stats import norm
 
-class Transaction():
-    """A transaction with uncertainty and payoffs
+
+def create_offer(model: Model) -> norm:
+    """Creates a normal distribution based on model's parameters
 
     Args:
-        mu: expected value of the transaction
-        sigma: standard deviation of the transaction
+        model: model holding the state of the simulation
     """
-    def __init__(self, mu: float, sigma: float):
-        self.mu = mu
-        self.sigma = sigma
-
-    def get_offer(self) -> norm:
-        """Creates an offer"""
-        return norm(self.mu, self.sigma)
-
-    def get_payoff(self, offer: norm) -> float:
-        """Generates payout from the offer
-
-        Params:
-            offer: a distribution from which the payoff will be drawn
-        Returns:
-            random value drawn from the normal distribution described by the offer
-        """
-        return offer.rvs()
+    mu = np.random.uniform(model.mu_min, model.mu_max)
+    return norm(mu, model.sigma)
 
 
 class Citizen(Agent):
@@ -36,7 +21,7 @@ class Citizen(Agent):
 
         Args:
             unique_id: unique identifier assigned to each agent
-            model: reference to the model holding the state of the simulation
+            model: model holding the state of the simulation
 
         Attributes:
             wealth (float): cummulative wealth obtained by the agent
@@ -53,7 +38,7 @@ class Citizen(Agent):
         """Decides whether transaction is promising enough to participate in it
 
         Params:
-            offer: distribution, from which payoff will be drawn
+            offer: distribution, from which payout will be drawn
         Returns:
             True if the probability of positive the payout is greater than acceptance threshold, False otherwise
         """
@@ -85,27 +70,25 @@ class Patrician(Citizen):
             while other_agent.type != 'plebeian':
                 other_agent = self.random.choice(self.model.schedule.agents)
 
-        # create a transaction
-        mu = np.random.uniform(self.model.mu_min, self.model.mu_max)
-        sigma = self.model.sigma
-        t = Transaction(mu, sigma)
+        # draw offers for the patrician and the plebeian
+        offer_for_patrician = create_offer(self.model)
+        offer_for_plebeian = create_offer(self.model)
 
-        pat_true = t.get_offer()
-        pleb_true = t.get_offer()
+        # create distorted offer for the plebeian
+        mu = np.random.uniform(offer_for_plebeian.mean(), offer_for_plebeian.mean() * self.model.beta)
+        distorted_offer_for_plebeian = norm(mu, self.model.sigma)
 
-        pleb_mu = np.random.uniform(pleb_true.mean(), pleb_true.mean() * self.model.beta)
-        pleb_offer = norm(pleb_mu, sigma)
-
-        if self.accepts(pat_true):
-            if other_agent.accepts(pleb_offer):
+        if self.accepts(offer_for_patrician):
+            if other_agent.accepts(distorted_offer_for_plebeian):
                 self.num_transactions += 1
                 other_agent.num_transactions += 1
 
-                self.wealth += t.get_payoff(pat_true)
-                other_agent.wealth += t.get_payoff(pleb_true)
+                self.wealth += offer_for_patrician.rvs()
+                other_agent.wealth += offer_for_plebeian.rvs()
             else:
-                self.num_rejections += 1
                 other_agent.num_rejections += 1
+        else:
+            self.num_rejections += 1
 
 
 class Plebeian(Citizen):
@@ -150,6 +133,7 @@ class TransactionModel(Model):
         self.symmetric = symmetric
 
         self.schedule = RandomActivation(self)
+
         # Create agents
         for i in range(self.n_plebeians):
             a = Plebeian(i, self)
